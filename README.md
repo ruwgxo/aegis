@@ -2,20 +2,27 @@
 
 **Hybrid quantum-safe encryption for Python.**
 
-Combines classical cryptography (AES-256-GCM, ECDH P-256, ECDSA P-256) with post-quantum algorithms (ML-KEM-1024, ML-DSA-87) so security holds against both classical and quantum adversaries. Breaks only if BOTH algorithm families are broken simultaneously.
+Combines classical cryptography (AES-256-GCM, ECDH P-256, ECDSA P-256) with post-quantum algorithms (ML-KEM-1024, ML-DSA-87) in an experimental hybrid construction. End-to-end security also depends on the protocol limitations below.
 
 **Author:** Raghav Dinesh | [github.com/ruwgxo](https://github.com/ruwgxo) | MIT License
 
 ---
 
-## Security Guarantees
+## Security Status
 
-| Property | How |
-|---|---|
-| Confidentiality | AES-256-GCM + ML-KEM-1024 — both must break simultaneously |
-| Authenticity | Dual signatures: ECDSA P-256 + ML-DSA-87 (FIPS 204) |
-| Forward secrecy | Ephemeral keys + 24h session rotation |
-| Replay protection | Nonces + session binding |
+This is an experimental implementation, not a production secure-channel protocol.
+The cryptographic primitives are combined in the code, but the current session
+API has important limitations:
+
+- Handshake keys are exchanged without peer authentication or transcript signatures.
+- Random encryption nonces do not provide replay detection; no replay cache exists.
+- Rotation generates local keys without a peer re-handshake, so peers lose key agreement.
+- `Session.verify()` uses the session's own signing keys, not a stored peer identity.
+- Clearing a mutable copy does not guarantee erasure of the original Python key bytes.
+
+The quickstart demonstrates a basic round trip only. Authenticated handshakes,
+peer-coordinated rotation, replay protection, and key lifecycle handling require
+further implementation and review before deployment.
 
 ## Algorithms
 
@@ -65,14 +72,14 @@ See `examples/basic_encryption.py` for a full end-to-end demo.
 
 ## Project Status
 
-**Pre-alpha.** Core crypto complete and tested. Not production-ready.
+**Pre-alpha.** Cryptographic primitives and an experimental session API are implemented. Not production-ready.
 
 ### Done
 
 - `aegis/classical/` — AES-256-GCM, ECDH P-256, ECDSA P-256
 - `aegis/pqc/` — ML-KEM-1024, ML-DSA-87
 - `aegis/hybrid/kdf.py` — HKDF combining both shared secrets
-- `aegis/hybrid/session.py` — session lifecycle, 24h key rotation, dual signing
+- `aegis/hybrid/session.py` — experimental session lifecycle, local key rotation, dual signing
 - `tests/` — 66 tests passing (NIST KATs + integration)
 - `examples/basic_encryption.py`
 
