@@ -1,6 +1,7 @@
 # aegis/hybrid/kdf.py
 # HKDF combining ECDH and ML-KEM-1024 shared secrets into a single AES-256 key.
-# This is the core of Aegis — security holds if EITHER classical OR PQC is unbroken.
+# Intended goal: the key stays secret if EITHER the classical OR the PQC exchange holds.
+# See derive() for why this combiner does not yet meet that goal robustly.
 
 from __future__ import annotations
 
@@ -28,8 +29,11 @@ def derive(
     """
     Derive a 256-bit AES key from ECDH and ML-KEM-1024 shared secrets via HKDF-SHA256.
 
-    Both secrets are XOR-combined before HKDF extraction.
-    Security: breaks only if BOTH ECDH P-256 AND ML-KEM-1024 are broken simultaneously.
+    Both secrets are XOR-combined before HKDF extraction. The intent is that the key
+    stays secret unless BOTH ECDH P-256 AND ML-KEM-1024 are broken. This combiner does
+    not bind the key to the KEM ciphertext or either party's public keys, which standard
+    hybrid constructions (concatenating the secrets with that context, as in the IETF
+    hybrid TLS design or X-Wing) do, so it should not be relied on as a robust combiner.
 
     Args:
         ecdh_shared_secret:   32-byte output of ECDH P-256 exchange
@@ -43,7 +47,8 @@ def derive(
     if len(ecdh_shared_secret) == 0 or len(kyber_shared_secret) == 0:
         raise KDFError('Shared secrets must not be empty')
 
-    # XOR-combine: if one secret is compromised, the other still contributes entropy.
+    # XOR-combine: hides the key while the two secrets are independent, but nothing binds
+    # them to the exchange that produced them (see the docstring).
     # Pad shorter secret with zeros to match lengths before XOR.
     l = max(len(ecdh_shared_secret), len(kyber_shared_secret))
     a = ecdh_shared_secret.ljust(l, b'\x00')
