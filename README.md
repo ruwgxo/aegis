@@ -19,6 +19,9 @@ API has important limitations:
 - Rotation generates local keys without a peer re-handshake, so peers lose key agreement.
 - `Session.verify()` uses the session's own signing keys, not a stored peer identity.
 - Clearing a mutable copy does not guarantee erasure of the original Python key bytes.
+- The KDF XOR-combines the ECDH and ML-KEM shared secrets and does not bind the key to
+  the KEM ciphertext or either party's public keys. Standard hybrid designs concatenate
+  the secrets and include that context, so this combiner should not be relied on.
 
 The quickstart demonstrates a basic round trip only. Authenticated handshakes,
 peer-coordinated rotation, replay protection, and key lifecycle handling require
@@ -64,11 +67,8 @@ See `examples/basic_encryption.py` for a full end-to-end demo.
 
 ## Performance
 
-| Operation | Classical | Aegis Hybrid | Overhead |
-|---|---|---|---|
-| Key generation | 0.5ms | 1.3ms | 2.6x |
-| Encryption / KB | 0.02ms | 0.022ms | 10% |
-| Signature | 1ms | 3ms | 3x |
+Not yet measured. `benchmarks/performance.py` is on the TODO list below; figures
+will be published with the hardware, library versions and script that produced them.
 
 ## Project Status
 
@@ -80,7 +80,7 @@ See `examples/basic_encryption.py` for a full end-to-end demo.
 - `aegis/pqc/` — ML-KEM-1024, ML-DSA-87
 - `aegis/hybrid/kdf.py` — HKDF combining both shared secrets
 - `aegis/hybrid/session.py` — experimental session lifecycle, local key rotation, dual signing
-- `tests/` — 66 tests passing (NIST KATs + integration)
+- `tests/` — 64 tests passing (classical primitives including AES-256-GCM NIST KATs, PQC, hybrid KDF and session)
 - `examples/basic_encryption.py`
 
 ### TODO (v0.1.0-alpha)
